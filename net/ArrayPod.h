@@ -3,7 +3,7 @@
 
 #include <string>
 #include <assert.h>
-// 自定义数组容器
+// selfdefine array container
 template<typename TYPE, size_t SIZE>
 class TArrayPod
 {
@@ -65,7 +65,7 @@ public:
 		return m_pData[index];
 	}
 
-	const TYPE& operator[](const siez_t index) const
+	const TYPE& operator[](const size_t index) const
 	{
 		assert(index < m_nSize);
 		return m_pData[index];
@@ -75,8 +75,8 @@ public:
 	{
 		size_t temp_size = src.m_nSize;
 		size_t temp_capicity = src.m_nCapicity;
-		Type* temp_data = src.m_pData;
-		Type temp_array[SIZE];
+		TYPE* temp_data = src.m_pData;
+		TYPE temp_array[SIZE];
 
 		if (temp_capicity <= SIZE)
 		{
@@ -134,7 +134,7 @@ public:
 		{
 			size_t new_size = m_nCapicity << 1;
 			TYPE* pNew = new TYPE[new_size];
-			if (!pnew)
+			if (!pNew)
 			{
 				return;
 			}
@@ -205,7 +205,7 @@ public:
 				delete[] m_pData;
 			}
 
-			m_pData = p;
+			m_pData = pNew;
 			m_nCapicity = new_size;
 		}
 
@@ -235,7 +235,7 @@ public:
 	{
 		assert(index < m_nSize);
 		TYPE* p = m_pData + 1;
-		memmove_s(p, (m_nSiez - index - 1) * sizeof(TYPE), p + 1, (m_nSize - index -1) * sizeof(TYPE));
+		memmove_s(p, (m_nSize - index - 1) * sizeof(TYPE), p + 1, (m_nSize - index -1) * sizeof(TYPE));
 		m_nSize--;
 	}
 

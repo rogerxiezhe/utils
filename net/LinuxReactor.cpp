@@ -12,11 +12,11 @@
 #define TYPE_CONNECTOR 0
 #define TYPE_BROADCAST 1
 #define TYPE_LISTENER 2
-typedef unsigner __int64 uint64_t;
+typedef u_int64_t uint64_t;
 #define MAKE_EV_DATA(type, index, sock)\
 		((uint64_t((type << 24) + index) << 32) + uint64_t(sock))
 
-inline CopyString(char* pDest, size_t byte_size, char* pSrc)
+inline void CopyString(char* pDest, size_t byte_size, const char* pSrc)
 {
 	const size_t SIZE1 = strlen(pSrc) + 1;
 
@@ -108,7 +108,8 @@ bool CReactor::Stop()
 	return true;
 }
 
-int CReactor::CreateBroadCast(const char * local_addr, const char * broadcast_addr, int port, size_t in_buf_len, broadcast_callback cb, void * context)
+int CReactor::CreateBroadCast(const char * local_addr, const char * broadcast_addr, int port, 
+								size_t in_buf_len, broadcast_callback cb, void * context)
 {
 	if (NULL == local_addr || NULL == broadcast_addr || port <= 0)
 	{
@@ -191,7 +192,7 @@ int CReactor::CreateBroadCast(const char * local_addr, const char * broadcast_ad
 	ev.data.u64 = MAKE_EV_DATA(TYPE_BROADCAST, index, sock);
 	ev.events = EPOLLIN | EPOLLRDHUP;
 
-	if (epol_ctl(m_Epoll, EPOLL_CTL_ADD, sock, &ev) != 0)
+	if (epoll_ctl(m_Epoll, EPOLL_CTL_ADD, sock, &ev) != 0)
 	{
 		// log
 		DeleteBroadCast((int)index);
@@ -424,7 +425,7 @@ int CReactor::CreateConnector(const char* addr, int port, size_t in_buf_len,
 	if (!addr || port <= 0) return -1;
 
 	port_socket_t sock;
-	if (!Port_SocketOpenTcp(sock))
+	if (!Port_SocketOpenTcp(&sock))
 	{
 		// log
 		return -1;
@@ -474,7 +475,7 @@ int CReactor::CreateConnector(const char* addr, int port, size_t in_buf_len,
 
 	pConnector->nEvData = MAKE_EV_DATA(TYPE_CONNECTOR, index, sock);
 	// add epoll
-	struct epollevent ev;
+	struct epoll_event ev;
 	ev.data.u64 = pConnector->nEvData;
 	ev.events = EPOLLOUT | EPOLLRDHUP;
 	if (epoll_ctl(m_Epoll, EPOLL_CTL_ADD, sock, &ev) != 0)
@@ -525,7 +526,7 @@ int CReactor::CreateConnector(const char* addr, int port, size_t in_buf_len,
 
 bool CReactor::DeleteConnector(int connector_id)
 {
-	if (connect_id >= m_Connectors.size()) return false;
+	if (connector_id >= m_Connectors.size()) return false;
 
 	connector_t* pConnector = m_Connectors[connector_id];
 	if (NULL == pConnector) return false;
@@ -556,7 +557,7 @@ bool CReactor::DeleteConnector(int connector_id)
 
 bool CReactor::ShutDownConnector(int connector_id, int wait_seconds)
 {
-	if (connect_id >= m_Connectors.size()) return false;
+	if (connector_id >= m_Connectors.size()) return false;
 
 	connector_t* pConnector = m_Connectors[connector_id];
 	if (NULL == pConnector) return false;
@@ -574,7 +575,7 @@ bool CReactor::ShutDownConnector(int connector_id, int wait_seconds)
 
 bool CReactor::GetConnected(int connector_id)
 {
-	if (connect_id >= m_Connectors.size()) return false;
+	if (connector_id >= m_Connectors.size()) return false;
 
 	connector_t* pConnector = m_Connectors[connector_id];
 	if (NULL == pConnector) return false;
@@ -723,7 +724,7 @@ bool CReactor::Send(int connector_id, const void * pdata, size_t len, bool force
 
 	if (pConnect->nSendEmpty == 1)
 	{
-		struct epoll_ev ev;
+		struct epoll_event ev;
 		ev.data.u64 = pConnect->nEvData;
 		ev.events =EPOLLIN | EPOLLOUT | EPOLLRDHUP;
 
@@ -767,7 +768,7 @@ bool CReactor::Send2(int connector_id, const void * pdata1, size_t len1, const v
 
 	if (pConnect->nSendEmpty == 1)
 	{
-		struct epoll_ev ev;
+		struct epoll_event ev;
 		ev.data.u64 = pConnect->nEvData;
 		ev.events =EPOLLIN | EPOLLOUT | EPOLLRDHUP;
 
@@ -789,7 +790,7 @@ int CReactor::CreateTimer(float seconds, timer_callback cb, void * context)
 		return -1;
 	}
 
-	timer_t* pTimer = new time_t;
+	timer_t* pTimer = new timer_t;
 
 	pTimer->fSeconds = seconds;
 	pTimer->fCounter = 0.0f;
@@ -965,10 +966,13 @@ void CReactor::EventLoop()
 	}
 	else if (nfds < 0)
 	{
-		if (errno != EINTR) // log "epoll wait error"
+		if (errno != EINTR)
+		{
+			// log
+		}
 	}
 
-	float elapse = (float)m_pTimer->GetElapseMilisec() * 0.001f;
+	float elapse = (float)m_pTimer->GetElapseMillisec() * 0.001f;
 
 	// 检查所有的定时器
 	if (!m_Timers.empty())
@@ -1037,11 +1041,11 @@ bool CReactor::ProcessWrite(size_t index, int sock)
 		if (-1 == res)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) res = 0;
-			else
-			{
-				char info[128];
+			else                  
+			{                
+				char info[128]; 
 				Port_SocketGetError(info, sizeof(info));
-				CloseConnect(inde);
+				CloseConnect(index);
 				return false;
 			}
 		}
@@ -1178,7 +1182,7 @@ bool CReactor::ProcessRead(size_t index, int sock)
 		}
 
 		pConnect->nEvData = MAKE_EV_DATA(io_type, connect_index, new_sock);
-		struct event ev;
+		struct epoll_event ev;
 		ev.data.u64 = pConnect->nEvData;
 		ev.events = EPOLLIN | EPOLLRDHUP;
 
@@ -1205,7 +1209,7 @@ bool CReactor::ProcessRead(size_t index, int sock)
 		int remote_port;
 
 		if (!Port_SocketReceiveFrom(sock, pBroad->pInBuf, pBroad->nInBufferLen, 
-		remote_addr, sizeof(remote_addr), remote_port, &read_size))
+		remote_addr, sizeof(remote_addr), &remote_port, &read_size))
 		{
 			char info[128];
 			Port_SocketGetError(info, sizeof(info));
@@ -1235,7 +1239,7 @@ bool CReactor::ProcessError(size_t index, int sock, int events)
 		if (pConnect->ConnectCallback)
 		{
 			//connect fail
-			pConnect->ConnectCallback(pConnect->pContext, (int)index, 0, pConnect->strad, pConnect->nPort);
+			pConnect->ConnectCallback(pConnect->pContext, (int)index, 0, pConnect->strAddr, pConnect->nPort);
 			DeleteConnector((int)index);
 		}
 		else
@@ -1379,7 +1383,7 @@ bool CReactor::Dump(const char * file_name)
 
 		fprintf(fp, "timer seconds: %f, counter: %f\r\n", (double)p->fSeconds, (double)p->fCounter);
 	}
-	fprintf("\r\n");
+	fprintf(fp, "\r\n");
 
 	fclose(fp);
 	return true;

@@ -86,7 +86,7 @@ public:
 	int CreateBroadCast(const char* local_addr, const char* broadcast_addr,
 		int port, size_t in_buf_len, broadcast_callback cb, void* context);
 
-	int DeleteBroadCast(int broadcast_id);
+	bool DeleteBroadCast(int broadcast_id);
 
 	bool SendBroadCast(int broadcast_id, const void* pdata, size_t len);
 

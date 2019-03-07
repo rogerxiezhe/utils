@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <sys/time.h>
-#include <sys/type.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
@@ -126,7 +126,7 @@ inline bool Port_SocketListen(port_socket_t sockFd, int backlog)
 	return res == -1;
 }
 
-inline bool Port_SocketAccept(port_socket_t sockFd， port_socket_t* pCliFd, char* remote_addr, 
+inline bool Port_SocketAccept(port_socket_t sockFd, port_socket_t* pCliFd, char* remote_addr, 
 							size_t remote_addr_size, int* remote_port)
 {
 	sockaddr_in sa;
@@ -250,7 +250,7 @@ inline int Port_SocketSendAsync(port_socket_t sockFd, const char* buffer, size_t
 
 inline bool Port_SocketReceive(port_socket_t sockFd, char* buffer, size_t size, size_t* pReadSize)
 {
-	ssize_t res = rec(sockFd, buffer, size, 0);
+	ssize_t res = recv(sockFd, buffer, size, 0);
  	if (-1 == res) return false;
 
  	*pReadSize = res;
@@ -266,7 +266,7 @@ inline int Port_SocketSendTo(port_socket_t sockFd, const char* buffer, size_t si
 	sa.sin_addr.s_addr = inet_addr(addr);
 	sa.sin_port = htons(port);
 
-	int res = sendto(sockFd, buffer, (int)size, (sockaddr*)&sa, sizeof(sockaddr));
+	int res = sendto(sockFd, buffer, size, 0, (sockaddr*)&sa, sizeof(sockaddr));
 	return (int)res;
 }
 
@@ -308,11 +308,11 @@ inline bool Port_SocketReceiveFrom(port_socket_t sockFd, char* buffer, size_t si
 inline bool Port_SocketSelectRead(port_socket_t sockFd, int wait_ms, bool* pReadFlag, bool* pExceptFlag)
 {
 	struct pollfd pfd;
-	pfd.fd = sockfd;
+	pfd.fd = sockFd;
 	pfd.events = POLLIN;
 	pfd.revents = 0;
 
-	int res = poll(&fd, 1, wait_ms);
+	int res = poll(&pfd, 1, wait_ms);
 	if (-1 == res) return false;
 
 	*pReadFlag = false;
@@ -320,7 +320,7 @@ inline bool Port_SocketSelectRead(port_socket_t sockFd, int wait_ms, bool* pRead
 	if (res > 0)
 	{
 		if (pfd.revents & POLLIN) *pReadFlag = true;
-		if (pfd.revents & (POLLUP | POLLERR)) *pExceptFlag = true;
+		if (pfd.revents & (POLLHUP | POLLERR)) *pExceptFlag = true;
 	}
 
 	return true;
@@ -333,7 +333,7 @@ inline bool Port_SocketSelect(port_socket_t sockFd, int wait_ms, bool* pReadFlag
 	pfd.events = POLLIN | POLLOUT;
 	pfd.revents = 0;
 
-	int res = poll(&fd, 1, wait_ms);
+	int res = poll(&pfd, 1, wait_ms);
 	if (-1 == res) return false;
 
 	*pReadFlag = false;
@@ -344,7 +344,7 @@ inline bool Port_SocketSelect(port_socket_t sockFd, int wait_ms, bool* pReadFlag
 	{
 		if (pfd.revents & POLLIN) *pReadFlag = true;
 		if (pfd.revents & POLLOUT) *pWriteFlag = true;
-		if (pfd.revents & (POLLUP | POLLERR)) *pExceptFlag = true;		
+		if (pfd.revents & (POLLHUP | POLLERR)) *pExceptFlag = true;		
 	}
 
 	return true;
@@ -397,7 +397,7 @@ inline bool Port_SocketSetBroadcast(port_socket_t sockFd)
 inline bool Port_SocketSetNoDelay(port_socket_t sockFd)
 {
 	int flag = 1;
-	int res = setsockopt(sockFd, SOL_SOCKET, IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(flag));
+	int res = setsockopt(sockFd, SOL_SOCKET, TCP_NODELAY, (const char*)&flag, sizeof(flag));
 	return -1 == res;
 }
 
@@ -413,7 +413,7 @@ inline const char* Port_SocketGetError(char* buffer, size_t size)
 
 inline int Port_SocketGetErrorId()
 {
-	return errorno;
+	return errno;
 }
 #endif
 
