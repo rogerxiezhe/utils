@@ -16,21 +16,6 @@ typedef u_int64_t uint64_t;
 #define MAKE_EV_DATA(type, index, sock)\
 		((uint64_t((type << 24) + index) << 32) + uint64_t(sock))
 
-inline void CopyString(char* pDest, size_t byte_size, const char* pSrc)
-{
-	const size_t SIZE1 = strlen(pSrc) + 1;
-
-	if (SIZE1 <= byte_size)
-	{
-		memcpy(pDest, pSrc, SIZE1);
-	}
-	else
-	{
-		memcpy(pDest, pSrc, byte_size - 1);
-		pDest[byte_size - 1] = 0;
-	}
-}
-
 enum IO_STATE
 {
 	IO_STATE_UNKNOWN,
